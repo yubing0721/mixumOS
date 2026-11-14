@@ -592,18 +592,22 @@ where
                 nix::sys::signal::Signal::SIGTERM,
             );
         }
-        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(1500);
         while std::time::Instant::now() < deadline {
             if list_pids().is_empty() {
                 return;
             }
             std::thread::sleep(std::time::Duration::from_millis(20));
         }
-        for pid in list_pids() {
-            let _ = nix::sys::signal::kill(
-                nix::unistd::Pid::from_raw(pid),
-                nix::sys::signal::Signal::SIGKILL,
-            );
+        let stubborn = list_pids();
+        if !stubborn.is_empty() {
+            eprintln!("stop_compositors: SIGTERM timed out after 1.5s, sending SIGKILL to {stubborn:?}");
+            for pid in stubborn {
+                let _ = nix::sys::signal::kill(
+                    nix::unistd::Pid::from_raw(pid),
+                    nix::sys::signal::Signal::SIGKILL,
+                );
+            }
         }
     }
     #[cfg(not(target_os = "linux"))]
